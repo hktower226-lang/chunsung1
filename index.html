@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>경기지역본부 명단 현황</title>
+  <!-- 웹브라우저에서 엑셀을 직접 읽어주는 도구 -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif; }
+    body { margin: 0; padding: 15px; background: #f1f5f9; color: #1e293b; }
+    .container { max-width: 1500px; margin: 0 auto; }
+    .header { background: white; padding: 16px 20px; border-radius: 12px; border: 1px solid #cbd5e1; margin-bottom: 12px; }
+    h2 { margin: 0 0 6px 0; font-size: 20px; color: #0f172a; }
+    .meta-info { font-size: 13px; color: #64748b; }
+    .search-box { position: sticky; top: 10px; z-index: 20; background: #f1f5f9; padding-bottom: 10px; }
+    input[type="text"] { width: 100%; padding: 12px 16px; font-size: 15px; border: 2px solid #2563eb; border-radius: 8px; outline: none; background: white; }
+    .count { font-size: 13px; font-weight: bold; color: #1e40af; margin-top: 6px; }
+    .table-box { overflow-x: auto; background: white; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.05); max-height: 80vh; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; }
+    th { background: #e2e8f0; padding: 10px 12px; border-bottom: 2px solid #94a3b8; color: #1e293b; text-align: left; position: sticky; top: 0; z-index: 10; }
+    td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; }
+    tr:hover { background: #eff6ff; }
+    .loading-banner { text-align: center; padding: 40px; font-size: 16px; color: #475569; font-weight: bold; }
+    .error-banner { text-align: center; padding: 30px; background: #fee2e2; color: #b91c1c; border-radius: 8px; font-size: 14px; margin-top: 10px; display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>경기지역본부 명단 현황</h2>
+      <div class="meta-info" id="status-text">엑셀 파일에서 실시간 데이터를 불러오는 중...</div>
+    </div>
+
+    <div class="search-box">
+      <input type="text" id="search" placeholder="성명, 지부, 현장명, 원청사, 전화번호 등 실시간 검색..." onkeyup="doSearch()">
+      <div class="count" id="info"></div>
+    </div>
+
+    <div id="loading" class="loading-banner">
+      ⏳ 엑셀 파일에서 최신 명단을 읽어오는 중입니다...
+    </div>
+
+    <div id="error-box" class="error-banner"></div>
+
+    <div class="table-box" id="table-wrap" style="display:none;">
+      <table id="myTable">
+        <thead id="t-head"></thead>
+        <tbody id="t-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const CANDIDATES = [
+      "경기지역본부명단.xlsx",
+      "경기지역본부_명단_수정완료 (4).xlsx",
+      "명단.xlsx",
+      "data.xlsx"
+    ];
+
+    let allRows = [];
+    let tableHeaders = [];
+
+    async function loadExcel() {
+      let loaded = false;
+
+      for (let filename of CANDIDATES) {
+        try {
+          const url = encodeURIComponent(filename) + "?v=" + new Date().getTime();
+          const response = await fetch(url);
+          if (!response.ok) continue;
+
+          const data = await response.arrayBuffer();
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheet = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[firstSheet];
+          
+          const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: "" });
+          if (rawRows && rawRows.length > 0) {
+            renderData(filename, rawRows);
+            loaded = true;
+            break;
+          }
+        } catch (e) {}
+      }
+
+      if (!loaded) {
+        document.getElementById("loading").style.display = "none";
+        const errBox = document.getElementById("error-box");
+        errBox.style.display = "block";
+        errBox.innerHTML = `
+          <strong>⚠️ 엑셀 파일을 찾지 못했습니다.</strong><br><br>
+          깃허브 저장소에 <strong>[경기지역본부명단.xlsx]</strong> 파일이 올라가 있는지 확인해 주세요.
+        `;
+        document.getElementById("status-text").innerText = "엑셀 파일 로드 실패";
+      }
+    }
+
+    function renderData(filename, rawRows) {
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("table-wrap").style.display = "block";
+      document.getElementById("status-text").innerText = `연결된 엑셀: ${filename} (동기화 완료)`;
+
+      tableHeaders = rawRows[0];
+      const dataRows = rawRows.slice(1).filter(r => r.some(cell => cell !== ""));
+
+      const thead = document.getElementById("t-head");
+      thead.innerHTML = "<tr>" + tableHeaders.map(h => `<th>${h || "-"}</th>`).join("") + "</tr>";
+
+      const tbody = document.getElementById("t-body");
+      tbody.innerHTML = dataRows.map(row => {
+        return "<tr>" + tableHeaders.map((_, i) => `<td>${row[i] !== undefined ? row[i] : ""}</td>`).join("") + "</tr>";
+      }).join("");
+
+      allRows = Array.from(tbody.querySelectorAll("tr"));
+      updateCount(allRows.length, allRows.length);
+    }
+
+    function doSearch() {
+      const q = document.getElementById("search").value.toLowerCase().trim();
+      let match = 0;
+      allRows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        if (text.includes(q)) {
+          row.style.display = "";
+          match++;
+        } else {
+          row.style.display = "none";
+        }
+      });
+      updateCount(match, allRows.length);
+    }
+
+    function updateCount(match, total) {
+      document.getElementById("info").innerText = `검색 결과: ${match}명 / 전체 ${total}명`;
+    }
+
+    loadExcel();
+  </script>
+</body>
+</html>
