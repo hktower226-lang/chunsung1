@@ -8,7 +8,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 기본 스타일 설정
+# 기본 스타일 설정 (대형: 파란색, 소형: 빨간색 태그 디자인 추가)
 st.markdown("""
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
@@ -35,7 +35,8 @@ st.markdown("""
     }
     .tag-status-work { background: #d1e7dd; color: #0f5132; }
     .tag-status-wait { background: #fff3cd; color: #664d03; }
-    .tag-size { background: #cfe2ff; color: #084298; }
+    .tag-size-lg { background: #cfe2ff; color: #084298; font-weight: bold; }
+    .tag-size-sm { background: #f8d7da; color: #842029; font-weight: bold; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -83,7 +84,6 @@ def safe_num(val):
     if not val or val == 'nan' or val == '':
         return '0'
     try:
-        # 소수점 형태(.0)로 읽히는 경우 처리
         return str(int(float(val)))
     except:
         return str(val)
@@ -183,6 +183,14 @@ else:
         site = row.iloc[SITE_IDX] if row.iloc[SITE_IDX] else '-'
         size_val = row.iloc[SIZE_IDX] if row.iloc[SIZE_IDX] else '-'
         
+        # 대형/소형 태그 색상 구분 클래스 지정
+        if "대형" in size_val:
+            size_class = "tag-size-lg"
+        elif "소형" in size_val:
+            size_class = "tag-size-sm"
+        else:
+            size_class = "tag"
+        
         # 타워 수량 및 노조별 상세 대수 정보 (안전하게 숫자 변환)
         tower_count = safe_num(row.iloc[TOWER_COUNT_IDX])
         hano = safe_num(row.iloc[UNION_HANO_IDX])
@@ -215,7 +223,7 @@ else:
             <div class="member-name">
                 {name} 
                 <span class="tag">{branch}</span> 
-                <span class="tag tag-size">{size_val}</span>
+                <span class="tag {size_class}">{size_val}</span>
                 <span class="tag {status_class}">{status_text}</span>
             </div>
             <div class="member-info">🏗️ <b>현장명:</b> {site if site else '현장 없음 (대기 중)'}</div>
