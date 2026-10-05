@@ -8,13 +8,25 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 모바일 브라우저 viewport 및 스타일 설정
+# 모바일 및 PC에서 2열 레이아웃이 줄바꿈되지 않고 강제로 좌우 나란히 배치되도록 CSS 설정
 st.markdown("""
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     </head>
     <style>
     .stApp { padding: 10px; }
+    /* Streamlit의 컬럼들을 강제로 좌우 50%씩 차지하여 가로로 나란히 배치되도록 설정 */
+    [data-testid="column"] {
+        width: 50% !important;
+        flex: 1 1 50% !important;
+        min-width: 50% !important;
+    }
+    /* 컬럼들을 감싸는 행(row)을 flex로 정렬 */
+    [data-testid="stHorizontalBlock"] {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+    }
     .member-card {
         background-color: #f8f9fa;
         border-radius: 10px;
@@ -72,12 +84,11 @@ NOTE_PRIME_IDX = 24  # 비고(원청사)
 search_query = st.text_input("🔍 통합 검색 (이름, 현장명, 원청사, 임대사)", "")
 st.caption("💡 검색어 입력 후 **Enter**를 누르면 검색이 적용됩니다.")
 
-# --- 카테고리 검색란: 좌우 2개씩, 위아래 2칸씩 (2x2 그리드) 배치 ---
+# --- 카테고리 검색란: 2x2 그리드 배치 (1행: 소속지부/대기유무, 2행: 원청사/임대사) ---
 row1_col1, row1_col2 = st.columns(2)
 row2_col1, row2_col2 = st.columns(2)
 
 with row1_col1:
-    # '지부보류'를 포함하여 데이터에 존재하는 모든 소속지부 목록을 강제로 확실하게 추출
     raw_branches = []
     for val in df.iloc[:, BRANCH_IDX]:
         cleaned_val = str(val).strip()
@@ -90,7 +101,6 @@ with row1_col2:
     selected_status = st.selectbox("대기유무", ["전체", "취업 중", "대기자"])
 
 with row2_col1:
-    # 원청사 목록 추출 (본래 값과 비고란 고려)
     prime_list = []
     for _, row in df.iterrows():
         p_val = row.iloc[NOTE_PRIME_IDX] if row.iloc[NOTE_PRIME_IDX] else row.iloc[PRIME_IDX]
@@ -101,7 +111,6 @@ with row2_col1:
     selected_prime = st.selectbox("원청사", ["전체"] + raw_primes)
 
 with row2_col2:
-    # 임대사 목록 추출 (본래 값과 비고란 고려)
     rental_list = []
     for _, row in df.iterrows():
         r_val = row.iloc[NOTE_RENTAL_IDX] if row.iloc[NOTE_RENTAL_IDX] else row.iloc[RENTAL_IDX]
