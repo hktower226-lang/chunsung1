@@ -68,7 +68,7 @@ RENTAL_IDX = 9
 PRIME_IDX = 10
 SITE_IDX = 11
 STATUS_IDX = 19
-SIZE_IDX = 20          # 대형/소형 (여기에 포함시킴으로써 '대형', '소형' 검색 가능)
+SIZE_IDX = 20          # 대형/소형
 NOTE_RENTAL_IDX = 23   # 비고(임대사)
 NOTE_PRIME_IDX = 24    # 비고(원청사)
 TOWER_COUNT_IDX = 25   # 현재 설치 타워수량
@@ -161,7 +161,7 @@ if selected_rental != "전체":
             rental_matched_indices.append(idx)
     filtered_df = filtered_df.loc[rental_matched_indices]
 
-# 검색어 필터 (SIZE_IDX를 포함하여 '대형', '소형' 검색이 모두 가능하도록 수정)
+# 검색어 필터
 if search_query:
     query_clean = search_query.replace(" ", "").lower()
     cond_search = pd.Series(False, index=filtered_df.index)
@@ -231,16 +231,17 @@ else:
         </div>
         """, unsafe_allow_html=True)
         
-        # 세부내역 확인을 위한 Streamlit expander
+        # 세부내역 확인을 위한 Streamlit expander (연락처 터치 시 전화 걸기 기능 적용)
         with st.expander(f"📋 {name} 님의 세부내역 보기"):
+            phone_html = f"<a href='tel:{phone}'>{phone}</a>" if phone != '-' else '-'
             st.markdown(f"""
-            - 📞 **연락처:** {phone}
+            - 📞 **연락처:** {phone_html}
             - 🏠 **거주 주소지:** {home_addr}
             - 🏗️ **현재 설치 타워수량 총계:** {tower_count}대
               - ▫️ **한노:** {hano}대
               - ▫️ **민노:** {minno}대
-              - ▫️ **건산:** {ex_hano}대
+              - ▫️️ **건산:** {ex_hano}대
               - ▫️ **비노:** {non_union}대
               - ▫️ **미정:** {midung}대
             - 💰 **평균임금:** {wage}
-            """)
+            """, unsafe_allow_html=True)
