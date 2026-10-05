@@ -71,8 +71,22 @@ SIZE_IDX = 20          # 대형/소형
 NOTE_RENTAL_IDX = 23   # 비고(임대사)
 NOTE_PRIME_IDX = 24    # 비고(원청사)
 TOWER_COUNT_IDX = 25   # 현재 설치 타워수량
+UNION_HANO_IDX = 26    # 한국타워크레인 조종사노동조합 (한노)
+UNION_MINNO_IDX = 27   # 민주노총 건설노조 타워크레인분과 (민노)
+UNION_EX_HANO_IDX = 28 # 건설노조(한노제명) 타워크레인분과 (건산)
+UNION_NON_IDX = 29     # 비노조 및 직원 (비노)
 MIDUNG_IDX = 30        # 미정
 WAGE_IDX = 31          # 평균임금
+
+# 숫자 데이터를 안전하게 포맷팅하는 헬퍼 함수
+def safe_num(val):
+    if not val or val == 'nan' or val == '':
+        return '0'
+    try:
+        # 소수점 형태(.0)로 읽히는 경우 처리
+        return str(int(float(val)))
+    except:
+        return str(val)
 
 # UI 검색 필터 및 안내 문구
 search_query = st.text_input("🔍 통합 검색 (이름, 현장명, 원청사, 임대사)", "")
@@ -168,8 +182,14 @@ else:
         home_addr = row.iloc[HOME_ADDR_IDX] if row.iloc[HOME_ADDR_IDX] else '-'
         site = row.iloc[SITE_IDX] if row.iloc[SITE_IDX] else '-'
         size_val = row.iloc[SIZE_IDX] if row.iloc[SIZE_IDX] else '-'
-        tower_count = row.iloc[TOWER_COUNT_IDX] if row.iloc[TOWER_COUNT_IDX] else '-'
-        midung = row.iloc[MIDUNG_IDX] if row.iloc[MIDUNG_IDX] else '-'
+        
+        # 타워 수량 및 노조별 상세 대수 정보 (안전하게 숫자 변환)
+        tower_count = safe_num(row.iloc[TOWER_COUNT_IDX])
+        hano = safe_num(row.iloc[UNION_HANO_IDX])
+        minno = safe_num(row.iloc[UNION_MINNO_IDX])
+        ex_hano = safe_num(row.iloc[UNION_EX_HANO_IDX])
+        non_union = safe_num(row.iloc[UNION_NON_IDX])
+        midung = safe_num(row.iloc[MIDUNG_IDX])
         wage = row.iloc[WAGE_IDX] if row.iloc[WAGE_IDX] else '-'
         
         # 임대사/원청사 표시 (비고에 적혀있으면 비고값 우선 사용)
@@ -189,7 +209,7 @@ else:
             status_text = "대기자"
             status_class = "tag-status-wait"
             
-        # 메인 카드 렌더링 (연락처 대신 소형/대형 태그 표시)
+        # 메인 카드 렌더링
         st.markdown(f"""
         <div class="member-card">
             <div class="member-name">
@@ -203,12 +223,16 @@ else:
         </div>
         """, unsafe_allow_html=True)
         
-        # 세부내역 확인을 위한 Streamlit expander (클릭하면 열림)
+        # 세부내역 확인을 위한 Streamlit expander
         with st.expander(f"📋 {name} 님의 세부내역 보기"):
             st.markdown(f"""
             - 📞 **연락처:** {phone}
             - 🏠 **거주 주소지:** {home_addr}
-            - 🏗️ **설치 타워수량:** {tower_count if tower_count != '-' else '0'}대
-            - 📍 **미정 위치:** {midung if midung else '정보 없음'}
-            - 💰 **평균임금:** {wage if wage else '정보 없음'}
+            - 🏗️ **현재 설치 타워수량 총계:** {tower_count}대
+              - ▫️ **한노:** {hano}대
+              - ▫️ **민노:** {minno}대
+              - ▫️ **건산:** {ex_hano}대
+              - ▫️ **비노:** {non_union}대
+              - ▫️ **미정:** {midung}대
+            - 💰 **평균임금:** {wage}
             """)
