@@ -8,13 +8,17 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 모바일 브라우저 viewport 뷰포트 확대 허용 헤더 삽입
+# 모바일 브라우저 viewport 뷰포트 확대 허용 및 4분할 칸 정렬을 위한 스타일 삽입
 st.markdown("""
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     </head>
     <style>
     .stApp { padding: 10px; }
+    /* 모바일 환경에서 4분할 selectbox가 답답하지 않도록 여백 조정 */
+    div[data-testid="column"] {
+        padding: 0px 4px;
+    }
     .member-card {
         background-color: #f8f9fa;
         border-radius: 10px;
@@ -68,15 +72,15 @@ STATUS_IDX = 19
 NOTE_RENTAL_IDX = 23 # 비고(임대사)
 NOTE_PRIME_IDX = 24  # 비고(원청사)
 
-# UI 검색 필터 및 한글 검색 안내 문구 추가
+# UI 검색 필터 및 안내 문구
 search_query = st.text_input("🔍 통합 검색 (이름, 현장명, 원청사, 임대사)", "")
 st.caption("💡 검색어 입력 후 **Enter**를 누르면 검색이 적용됩니다.")
 
-# 필터 레이아웃 구성 (소속지부, 대기유무, 원청사, 임대사)
+# --- 4등분(4개의 열)으로 칸 나누기 ---
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    # '지부보류'를 포함하여 빈 값이 아닌 모든 소속지부/본부 목록을 정확하게 추출
+    # '지부보류'를 포함하여 빈 값이 아닌 모든 소속지부/본부 목록 추출
     raw_branches = sorted(list(set([str(x).strip() for x in df.iloc[:, BRANCH_IDX] if str(x).strip() and str(x).strip() != 'nan'])))
     selected_branch = st.selectbox("소속지부/본부", ["전체"] + raw_branches)
 
