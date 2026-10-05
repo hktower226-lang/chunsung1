@@ -8,32 +8,13 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 셀렉트박스(검색칸) 자체의 크기를 강제로 줄여서 가로로 2개씩 나란히 들어가도록 CSS 최적화
+# 기본 스타일 설정
 st.markdown("""
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     </head>
     <style>
     .stApp { padding: 10px; }
-    
-    /* Streamlit 컬럼들을 가로로 나란히 배치하고 간격 좁히기 */
-    [data-testid="stHorizontalBlock"] {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: nowrap;
-        gap: 8px;
-    }
-    [data-testid="column"] {
-        flex: 1 1 50% !important;
-        min-width: 0 !important;
-        padding: 0px !important;
-    }
-    
-    /* 셀렉트박스 입력창 크기를 컴팩트하게 줄임 */
-    div[data-baseweb="select"] {
-        max-width: 100% !important;
-    }
-    
     .member-card {
         background-color: #f8f9fa;
         border-radius: 10px;
@@ -91,41 +72,38 @@ NOTE_PRIME_IDX = 24  # 비고(원청사)
 search_query = st.text_input("🔍 통합 검색 (이름, 현장명, 원청사, 임대사)", "")
 st.caption("💡 검색어 입력 후 **Enter**를 누르면 검색이 적용됩니다.")
 
-# --- 카테고리 검색란: 2x2 그리드 배치 (1행: 소속지부/대기유무, 2행: 원청사/임대사) ---
-row1_col1, row1_col2 = st.columns(2)
-row2_col1, row2_col2 = st.columns(2)
+# --- 기존 세로 순서대로 정렬된 검색 카테고리 ---
+# 1. 소속지부본부
+raw_branches = []
+for val in df.iloc[:, BRANCH_IDX]:
+    cleaned_val = str(val).strip()
+    if cleaned_val and cleaned_val != 'nan' and cleaned_val not in raw_branches:
+        raw_branches.append(cleaned_val)
+raw_branches = sorted(raw_branches)
+selected_branch = st.selectbox("소속지부본부", ["전체"] + raw_branches)
 
-with row1_col1:
-    raw_branches = []
-    for val in df.iloc[:, BRANCH_IDX]:
-        cleaned_val = str(val).strip()
-        if cleaned_val and cleaned_val != 'nan' and cleaned_val not in raw_branches:
-            raw_branches.append(cleaned_val)
-    raw_branches = sorted(raw_branches)
-    selected_branch = st.selectbox("소속지부/본부", ["전체"] + raw_branches)
+# 2. 대기유무
+selected_status = st.selectbox("대기유무", ["전체", "취업 중", "대기자"])
 
-with row1_col2:
-    selected_status = st.selectbox("대기유무", ["전체", "취업 중", "대기자"])
+# 3. 원청사
+prime_list = []
+for _, row in df.iterrows():
+    p_val = row.iloc[NOTE_PRIME_IDX] if row.iloc[NOTE_PRIME_IDX] else row.iloc[PRIME_IDX]
+    p_val_str = str(p_val).strip()
+    if p_val_str and p_val_str != 'nan' and p_val_str not in prime_list:
+        prime_list.append(p_val_str)
+raw_primes = sorted(prime_list)
+selected_prime = st.selectbox("원청사", ["전체"] + raw_primes)
 
-with row2_col1:
-    prime_list = []
-    for _, row in df.iterrows():
-        p_val = row.iloc[NOTE_PRIME_IDX] if row.iloc[NOTE_PRIME_IDX] else row.iloc[PRIME_IDX]
-        p_val_str = str(p_val).strip()
-        if p_val_str and p_val_str != 'nan' and p_val_str not in prime_list:
-            prime_list.append(p_val_str)
-    raw_primes = sorted(prime_list)
-    selected_prime = st.selectbox("원청사", ["전체"] + raw_primes)
-
-with row2_col2:
-    rental_list = []
-    for _, row in df.iterrows():
-        r_val = row.iloc[NOTE_RENTAL_IDX] if row.iloc[NOTE_RENTAL_IDX] else row.iloc[RENTAL_IDX]
-        r_val_str = str(r_val).strip()
-        if r_val_str and r_val_str != 'nan' and r_val_str not in rental_list:
-            rental_list.append(r_val_str)
-    raw_rentals = sorted(rental_list)
-    selected_rental = st.selectbox("임대사", ["전체"] + raw_rentals)
+# 4. 임대사
+rental_list = []
+for _, row in df.iterrows():
+    r_val = row.iloc[NOTE_RENTAL_IDX] if row.iloc[NOTE_RENTAL_IDX] else row.iloc[RENTAL_IDX]
+    r_val_str = str(r_val).strip()
+    if r_val_str and r_val_str != 'nan' and r_val_str not in rental_list:
+        rental_list.append(r_val_str)
+raw_rentals = sorted(rental_list)
+selected_rental = st.selectbox("임대사", ["전체"] + raw_rentals)
 
 # --- 자동 판단 로직 ---
 is_site_exist = df.iloc[:, SITE_IDX].astype(str).str.strip() != ''
