@@ -8,7 +8,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 기본 스타일 설정 (대형: 파란색, 소형: 빨간색 태그 디자인 추가)
+# 기본 스타일 설정 (대형: 파란색, 소형: 빨간색 태그 디자인)
 st.markdown("""
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
@@ -68,7 +68,7 @@ RENTAL_IDX = 9
 PRIME_IDX = 10
 SITE_IDX = 11
 STATUS_IDX = 19
-SIZE_IDX = 20          # 대형/소형
+SIZE_IDX = 20          # 대형/소형 (여기에 포함시킴으로써 '대형', '소형' 검색 가능)
 NOTE_RENTAL_IDX = 23   # 비고(임대사)
 NOTE_PRIME_IDX = 24    # 비고(원청사)
 TOWER_COUNT_IDX = 25   # 현재 설치 타워수량
@@ -89,7 +89,7 @@ def safe_num(val):
         return str(val)
 
 # UI 검색 필터 및 안내 문구
-search_query = st.text_input("🔍 통합 검색 (이름, 현장명, 원청사, 임대사)", "")
+search_query = st.text_input("🔍 통합 검색 (이름, 현장명, 원청사, 임대사, 대형/소형)", "")
 st.caption("💡 검색어 입력 후 **Enter**를 누르면 검색이 적용됩니다.")
 
 # --- 기존 세로 순서대로 정렬된 검색 카테고리 ---
@@ -161,11 +161,11 @@ if selected_rental != "전체":
             rental_matched_indices.append(idx)
     filtered_df = filtered_df.loc[rental_matched_indices]
 
-# 검색어 필터
+# 검색어 필터 (SIZE_IDX를 포함하여 '대형', '소형' 검색이 모두 가능하도록 수정)
 if search_query:
     query_clean = search_query.replace(" ", "").lower()
     cond_search = pd.Series(False, index=filtered_df.index)
-    for idx in [NAME_IDX, SITE_IDX, PRIME_IDX, RENTAL_IDX, NOTE_RENTAL_IDX, NOTE_PRIME_IDX, BRANCH_IDX, HOME_ADDR_IDX]:
+    for idx in [NAME_IDX, SITE_IDX, PRIME_IDX, RENTAL_IDX, NOTE_RENTAL_IDX, NOTE_PRIME_IDX, BRANCH_IDX, HOME_ADDR_IDX, SIZE_IDX]:
         cond_search |= filtered_df.iloc[:, idx].astype(str).str.replace(" ", "").str.lower().str.contains(query_clean, na=False)
     filtered_df = filtered_df[cond_search]
 
