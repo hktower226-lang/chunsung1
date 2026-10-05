@@ -42,7 +42,7 @@ st.title("📱 경기지역본부 명단")
 
 @st.cache_data(ttl=10)
 def load_data():
-    file_path = "data.xlsx"
+    file_path = "경기지역본부명단.xlsx"
     raw_df = pd.read_excel(file_path, sheet_name=0, dtype=str)
     df = raw_df.iloc[2:].fillna('').copy()
     
@@ -68,10 +68,11 @@ STATUS_IDX = 19
 NOTE_RENTAL_IDX = 23 # 비고(임대사)
 NOTE_PRIME_IDX = 24  # 비고(원청사)
 
-# UI 검색 필터
-search_query = st.text_input("🔍 통합 검색 (이름, 현장명, 원청사, 임대사)", "")
+# UI 검색 필터 (help 인자를 통해 입력창 아래 안내 문구를 '검색 버튼' 관련 문구로 변경)
+search_query = st.text_input("🔍 통합 검색 (이름, 현장명, 원청사, 임대사)", "", help="검색 버튼을 눌러 결과를 확인하세요")
 
-col1, col2 = st.columns(2)
+# 필터 레이아웃 구성 (2열에서 4열로 확장하여 소속지부, 대기유무, 원청사, 임대사 배치)
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     raw_branches = sorted(list(set([x for x in df.iloc[:, BRANCH_IDX] if x and x != 'nan'])))
@@ -80,8 +81,27 @@ with col1:
 with col2:
     selected_status = st.selectbox("대기유무", ["전체", "취업 중", "대기자"])
 
+with col3:
+    # 원청사 목록 추출 (본래 값과 비고란 고려)
+    prime_list = []
+    for _, row in df.iterrows():
+        p_val = row.iloc[NOTE_PRIME_IDX] if row.iloc[NOTE_PRIME_IDX] else row.iloc[PRIME_IDX]
+        if p_val and p_val != 'nan':
+            prime_list.append(p_val)
+    raw_primes = sorted(list(set(prime_list)))
+    selected_prime = st.selectbox("원청사", ["전체"] + raw_primes)
+
+with col4:
+    # 임대사 목록 추출 (본래 값과 비고란 고려)
+    rental_list = []
+    for _, row in df.iterrows():
+        r_val = row.iloc[NOTE_RENTAL_IDX] if row.iloc[NOTE_RENTAL_IDX] else row.iloc[RENTAL_IDX]
+        if r_val and r_val != 'nan':
+            rental_list.append(r_val)
+    raw_rentals = sorted(list(set(rental_list)))
+    selected_rental = st.selectbox("임대사", ["전체"] + raw_rentals)
+
 # --- 자동 판단 로직 ---
-# 대기자 / 취업중 자동 판단 (현장명이 없거나 대기유무에 '대기'가 들어있으면 대기자)
 is_site_exist = df.iloc[:, SITE_IDX].astype(str).str.strip() != ''
 is_status_wait = df.iloc[:, STATUS_IDX].astype(str).str.contains('대기', na=False)
 cond_is_wait = (~is_site_exist) | is_status_wait
@@ -98,6 +118,24 @@ if selected_status == "취업 중":
     filtered_df = filtered_df[~cond_is_wait.reindex(filtered_df.index, fill_value=False)]
 elif selected_status == "대기자":
     filtered_df = filtered_df[cond_is_wait.reindex(filtered_df.index, fill_value=False)]
+
+# 원청사 필터
+if selected_prime != "전체":
+    prime_matched_indices = []
+    for idx, row in filtered_df.iterrows():
+        p_val = row.iloc[NOTE_PRIME_IDX] if row.iloc[NOTE_PRIME_IDX] else row.iloc[PRIME_IDX]
+        if p_val == selected_prime:
+            prime_matched_indices.append(idx)
+    filtered_df = filtered_df.loc[prime_matched_indices]
+
+# 임대사 필터
+if selected_rental != "전체":
+    rental_matched_indices = []
+    for idx, row in filtered_df.iterrows():
+        r_val = row.iloc[NOTE_RENTAL_IDX] if row.iloc[NOTE_RENTAL_IDX] else row.iloc[RENTAL_IDX]
+        if r_val == selected_rental:
+            rental_matched_indices.append(idx)
+    filtered_df = filtered_df.loc[rental_matched_indices]
 
 # 검색어 필터
 if search_query:
