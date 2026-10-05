@@ -8,17 +8,13 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 모바일 브라우저 viewport 뷰포트 확대 허용 및 4분할 칸 정렬을 위한 스타일 삽입
+# 모바일 브라우저 viewport 및 스타일 설정
 st.markdown("""
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     </head>
     <style>
     .stApp { padding: 10px; }
-    /* 모바일 환경에서 4분할 selectbox가 답답하지 않도록 여백 조정 */
-    div[data-testid="column"] {
-        padding: 0px 4px;
-    }
     .member-card {
         background-color: #f8f9fa;
         border-radius: 10px;
@@ -76,35 +72,43 @@ NOTE_PRIME_IDX = 24  # 비고(원청사)
 search_query = st.text_input("🔍 통합 검색 (이름, 현장명, 원청사, 임대사)", "")
 st.caption("💡 검색어 입력 후 **Enter**를 누르면 검색이 적용됩니다.")
 
-# --- 4등분(4개의 열)으로 칸 나누기 ---
-col1, col2, col3, col4 = st.columns(4)
+# --- 카테고리 검색란: 좌우 2개씩, 위아래 2칸씩 (2x2 그리드) 배치 ---
+row1_col1, row1_col2 = st.columns(2)
+row2_col1, row2_col2 = st.columns(2)
 
-with col1:
-    # '지부보류'를 포함하여 빈 값이 아닌 모든 소속지부/본부 목록 추출
-    raw_branches = sorted(list(set([str(x).strip() for x in df.iloc[:, BRANCH_IDX] if str(x).strip() and str(x).strip() != 'nan'])))
+with row1_col1:
+    # '지부보류'를 포함하여 데이터에 존재하는 모든 소속지부 목록을 강제로 확실하게 추출
+    raw_branches = []
+    for val in df.iloc[:, BRANCH_IDX]:
+        cleaned_val = str(val).strip()
+        if cleaned_val and cleaned_val != 'nan' and cleaned_val not in raw_branches:
+            raw_branches.append(cleaned_val)
+    raw_branches = sorted(raw_branches)
     selected_branch = st.selectbox("소속지부/본부", ["전체"] + raw_branches)
 
-with col2:
+with row1_col2:
     selected_status = st.selectbox("대기유무", ["전체", "취업 중", "대기자"])
 
-with col3:
+with row2_col1:
     # 원청사 목록 추출 (본래 값과 비고란 고려)
     prime_list = []
     for _, row in df.iterrows():
         p_val = row.iloc[NOTE_PRIME_IDX] if row.iloc[NOTE_PRIME_IDX] else row.iloc[PRIME_IDX]
-        if p_val and p_val != 'nan':
-            prime_list.append(p_val)
-    raw_primes = sorted(list(set(prime_list)))
+        p_val_str = str(p_val).strip()
+        if p_val_str and p_val_str != 'nan' and p_val_str not in prime_list:
+            prime_list.append(p_val_str)
+    raw_primes = sorted(prime_list)
     selected_prime = st.selectbox("원청사", ["전체"] + raw_primes)
 
-with col4:
+with row2_col2:
     # 임대사 목록 추출 (본래 값과 비고란 고려)
     rental_list = []
     for _, row in df.iterrows():
         r_val = row.iloc[NOTE_RENTAL_IDX] if row.iloc[NOTE_RENTAL_IDX] else row.iloc[RENTAL_IDX]
-        if r_val and r_val != 'nan':
-            rental_list.append(r_val)
-    raw_rentals = sorted(list(set(rental_list)))
+        r_val_str = str(r_val).strip()
+        if r_val_str and r_val_str != 'nan' and r_val_str not in rental_list:
+            rental_list.append(r_val_str)
+    raw_rentals = sorted(rental_list)
     selected_rental = st.selectbox("임대사", ["전체"] + raw_rentals)
 
 # --- 자동 판단 로직 ---
@@ -129,7 +133,7 @@ elif selected_status == "대기자":
 if selected_prime != "전체":
     prime_matched_indices = []
     for idx, row in filtered_df.iterrows():
-        p_val = row.iloc[NOTE_PRIME_IDX] if row.iloc[NOTE_PRIME_IDX] else row.iloc[PRIME_IDX]
+        p_val = str(row.iloc[NOTE_PRIME_IDX] if row.iloc[NOTE_PRIME_IDX] else row.iloc[PRIME_IDX]).strip()
         if p_val == selected_prime:
             prime_matched_indices.append(idx)
     filtered_df = filtered_df.loc[prime_matched_indices]
@@ -138,7 +142,7 @@ if selected_prime != "전체":
 if selected_rental != "전체":
     rental_matched_indices = []
     for idx, row in filtered_df.iterrows():
-        r_val = row.iloc[NOTE_RENTAL_IDX] if row.iloc[NOTE_RENTAL_IDX] else row.iloc[RENTAL_IDX]
+        r_val = str(row.iloc[NOTE_RENTAL_IDX] if row.iloc[NOTE_RENTAL_IDX] else row.iloc[RENTAL_IDX]).strip()
         if r_val == selected_rental:
             rental_matched_indices.append(idx)
     filtered_df = filtered_df.loc[rental_matched_indices]
