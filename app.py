@@ -35,6 +35,7 @@ st.markdown("""
     }
     .tag-status-work { background: #d1e7dd; color: #0f5132; }
     .tag-status-wait { background: #fff3cd; color: #664d03; }
+    .tag-size { background: #cfe2ff; color: #084298; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -57,16 +58,21 @@ except Exception as e:
     st.error(f"엑셀 파일 읽기 오류: {e}")
     st.stop()
 
-# 주요 컬럼 위치 인덱스
+# 주요 컬럼 위치 인덱스 (엑셀 구조 반영)
 NAME_IDX = 2
 BRANCH_IDX = 3
 PHONE_IDX = 6
+HOME_ADDR_IDX = 8      # 거주 주소
 RENTAL_IDX = 9
 PRIME_IDX = 10
 SITE_IDX = 11
 STATUS_IDX = 19
-NOTE_RENTAL_IDX = 23 # 비고(임대사)
-NOTE_PRIME_IDX = 24  # 비고(원청사)
+SIZE_IDX = 20          # 대형/소형
+NOTE_RENTAL_IDX = 23   # 비고(임대사)
+NOTE_PRIME_IDX = 24    # 비고(원청사)
+TOWER_COUNT_IDX = 25   # 현재 설치 타워수량
+MIDUNG_IDX = 30        # 미정
+WAGE_IDX = 31          # 평균임금
 
 # UI 검색 필터 및 안내 문구
 search_query = st.text_input("🔍 통합 검색 (이름, 현장명, 원청사, 임대사)", "")
@@ -145,7 +151,7 @@ if selected_rental != "전체":
 if search_query:
     query_clean = search_query.replace(" ", "").lower()
     cond_search = pd.Series(False, index=filtered_df.index)
-    for idx in [NAME_IDX, SITE_IDX, PRIME_IDX, RENTAL_IDX, NOTE_RENTAL_IDX, NOTE_PRIME_IDX, BRANCH_IDX]:
+    for idx in [NAME_IDX, SITE_IDX, PRIME_IDX, RENTAL_IDX, NOTE_RENTAL_IDX, NOTE_PRIME_IDX, BRANCH_IDX, HOME_ADDR_IDX]:
         cond_search |= filtered_df.iloc[:, idx].astype(str).str.replace(" ", "").str.lower().str.contains(query_clean, na=False)
     filtered_df = filtered_df[cond_search]
 
@@ -159,7 +165,12 @@ else:
         name = row.iloc[NAME_IDX] if row.iloc[NAME_IDX] else '-'
         branch = row.iloc[BRANCH_IDX] if row.iloc[BRANCH_IDX] else '-'
         phone = row.iloc[PHONE_IDX] if row.iloc[PHONE_IDX] else '-'
+        home_addr = row.iloc[HOME_ADDR_IDX] if row.iloc[HOME_ADDR_IDX] else '-'
         site = row.iloc[SITE_IDX] if row.iloc[SITE_IDX] else '-'
+        size_val = row.iloc[SIZE_IDX] if row.iloc[SIZE_IDX] else '-'
+        tower_count = row.iloc[TOWER_COUNT_IDX] if row.iloc[TOWER_COUNT_IDX] else '-'
+        midung = row.iloc[MIDUNG_IDX] if row.iloc[MIDUNG_IDX] else '-'
+        wage = row.iloc[WAGE_IDX] if row.iloc[WAGE_IDX] else '-'
         
         # 임대사/원청사 표시 (비고에 적혀있으면 비고값 우선 사용)
         rental_val = row.iloc[RENTAL_IDX]
@@ -178,15 +189,26 @@ else:
             status_text = "대기자"
             status_class = "tag-status-wait"
             
+        # 메인 카드 렌더링 (연락처 대신 소형/대형 태그 표시)
         st.markdown(f"""
         <div class="member-card">
             <div class="member-name">
                 {name} 
                 <span class="tag">{branch}</span> 
+                <span class="tag tag-size">{size_val}</span>
                 <span class="tag {status_class}">{status_text}</span>
             </div>
-            <div class="member-info">📞 <b>연락처:</b> {phone}</div>
             <div class="member-info">🏗️ <b>현장명:</b> {site if site else '현장 없음 (대기 중)'}</div>
             <div class="member-info">🏢 <b>임대사/원청사:</b> {rental} / {prime}</div>
         </div>
         """, unsafe_allow_html=True)
+        
+        # 세부내역 확인을 위한 Streamlit expander (클릭하면 열림)
+        with st.expander(f"📋 {name} 님의 세부내역 보기"):
+            st.markdown(f"""
+            - 📞 **연락처:** {phone}
+            - 🏠 **거주 주소지:** {home_addr}
+            - 🏗️ **설치 타워수량:** {tower_count if tower_count != '-' else '0'}대
+            - 📍 **미정 위치:** {midung if midung else '정보 없음'}
+            - 💰 **평균임금:** {wage if wage else '정보 없음'}
+            """)
