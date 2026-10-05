@@ -68,14 +68,16 @@ STATUS_IDX = 19
 NOTE_RENTAL_IDX = 23 # 비고(임대사)
 NOTE_PRIME_IDX = 24  # 비고(원청사)
 
-# UI 검색 필터 (help 인자를 통해 입력창 아래 안내 문구를 '검색 버튼' 관련 문구로 변경)
-search_query = st.text_input("🔍 통합 검색 (이름, 현장명, 원청사, 임대사)", "", help="검색 버튼을 눌러 결과를 확인하세요")
+# UI 검색 필터 및 한글 검색 안내 문구 추가
+search_query = st.text_input("🔍 통합 검색 (이름, 현장명, 원청사, 임대사)", "")
+st.caption("💡 검색어 입력 후 **Enter**를 누르면 검색이 적용됩니다.")
 
-# 필터 레이아웃 구성 (2열에서 4열로 확장하여 소속지부, 대기유무, 원청사, 임대사 배치)
+# 필터 레이아웃 구성 (소속지부, 대기유무, 원청사, 임대사)
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    raw_branches = sorted(list(set([x for x in df.iloc[:, BRANCH_IDX] if x and x != 'nan'])))
+    # '지부보류'를 포함하여 빈 값이 아닌 모든 소속지부/본부 목록을 정확하게 추출
+    raw_branches = sorted(list(set([str(x).strip() for x in df.iloc[:, BRANCH_IDX] if str(x).strip() and str(x).strip() != 'nan'])))
     selected_branch = st.selectbox("소속지부/본부", ["전체"] + raw_branches)
 
 with col2:
@@ -111,7 +113,7 @@ filtered_df = df.copy()
 
 # 지부 필터
 if selected_branch != "전체":
-    filtered_df = filtered_df[filtered_df.iloc[:, BRANCH_IDX] == selected_branch]
+    filtered_df = filtered_df[filtered_df.iloc[:, BRANCH_IDX].astype(str).str.strip() == selected_branch]
 
 # 대기유무 필터
 if selected_status == "취업 중":
